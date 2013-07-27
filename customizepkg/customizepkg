@@ -145,7 +145,30 @@ do
 			if [[ $? -eq 0 ]];
 				then 
 					echo -e "\nadd#source#${filename}" >> ./$package.customize
-					echo "add#md5sums#$(md5sum < ./${filename} | awk -F' ' '{print $1}')" >> ./$package.customize
+					for SUM_TYPE in md5 sha1 sha256 sha384 sha512
+					do
+						INCLUDE_SUM=0
+						
+						# Check if the checksum array exists and include the sum if so.
+						grep -q "${SUM_TYPE}sums=(" ./PKGBUILD
+						if [ $? -eq 0 ]
+						then
+							INCLUDE_SUM=1
+						elif [ "$SUM_TYPE" = "md5" ]
+						then
+							# If there was no previous source array, then start a md5 checksum array so that there is at least one checksum.
+							grep -q "source=(" ./PKGBUILD
+							if [ $? -ne 0 ]
+							then
+								INCLUDE_SUM=1
+							fi
+						fi
+						
+						if [ $INCLUDE_SUM -eq 1 ]
+						then
+							echo "add#${SUM_TYPE}sums#$(${SUM_TYPE}sum < ./${filename} | awk -F' ' '{print $1}')" >> ./$package.customize
+						fi
+					done
 					echo "included"
 				else
 					echo "already exists. Skipping..."
